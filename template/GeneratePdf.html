@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+    h3 { 
+      color: #333; 
+      margin: 0;
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      table-layout: fixed;
+      word-wrap: break-word;
+    }
+    th, td { 
+      border: 1px solid #ccc; 
+      padding: 4px; 
+      text-align: center;
+      overflow: hidden;
+      font-size: 10px;
+    }
+    th { 
+      background-color: gray; 
+      color: white;
+      font-weight: bold;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .cropped-image { 
+      width: 30%;
+      height: auto; 
+    }
+    .header-text {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      margin-left: auto;
+      align-items: flex-end;
+      height: 100px; /* Adjust this height based on your design */
+    }
+    .bottom-header-text {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <img class="cropped-image" src="data:image/png;base64,{{imageBase64}}" alt="Company Logo">
+      <div class="header-text">
+        <h3>{{companyname}}</h3>
+        <h3>{{companyarabicname}}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-header-text">
+    <h3>{{username}}</h3>
+    <h3>{{currentDate}}</h3>
+  </div>
+  <div>
+    {{data}}
+  </div>
+</body>
+</html>
