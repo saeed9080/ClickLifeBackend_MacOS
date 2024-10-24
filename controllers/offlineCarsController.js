@@ -5,14 +5,27 @@ const offlineCarsGeneratePdf = require("../GeneratedPDF/offlineCarsGeneratePdf")
 const getAllVehicles = async (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query;
-    const result = await query(
-      `SELECT * FROM vehicle LIMIT ${limit} OFFSET ${offset}`
-    );
-    const offlinecarsresults = await query("SELECT * FROM vehicle");
+    const result = await query(`
+      SELECT * FROM vehicle 
+      WHERE last_signal = 'Not connected'
+      UNION
+      SELECT * FROM vehicle 
+      WHERE last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'
+      AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3
+      LIMIT ${limit} OFFSET ${offset};
+    `);
+    const totalcount = await query(`
+      SELECT * FROM vehicle 
+      WHERE last_signal = 'Not connected'
+      UNION
+      SELECT * FROM vehicle 
+      WHERE last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'
+      AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3
+    `);
     res.status(200).send({
       success: true,
       result,
-      offlinecarsresults,
+      totalcount,
     });
   } catch (error) {
     res.status(400).send({
@@ -28,9 +41,17 @@ const searchController = async (req, res) => {
   try {
     const { Vehicle_Label, Client, IMEI, Sim_Number } = req.body;
 
-    let sql = `SELECT * FROM vehicle WHERE Vehicle_Label LIKE '%${Vehicle_Label}%' OR Client LIKE '%${Client}%' OR IMEI LIKE '%${IMEI}%' OR Sim_Number LIKE '%${Sim_Number}%'`;
+    let sql = `SELECT * FROM vehicle WHERE 
+    (Vehicle_Label LIKE '%${Vehicle_Label}%' AND last_signal = 'Not connected') OR (Vehicle_Label LIKE '%${Vehicle_Label}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+    OR 
+    (Client LIKE '%${Client}%' AND last_signal = 'Not connected') OR (Client LIKE '%${Client}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+    OR
+    (IMEI LIKE '%${IMEI}%' AND last_signal = 'Not connected') OR (IMEI LIKE '%${IMEI}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+    OR 
+    (Sim_Number LIKE '%${Sim_Number}%' AND last_signal = 'Not connected') OR (Sim_Number LIKE '%${Sim_Number}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)`;
 
     const results = await query(sql);
+    console.log(results.length);
     res.status(200).json({
       success: true,
       message: "Search results",
