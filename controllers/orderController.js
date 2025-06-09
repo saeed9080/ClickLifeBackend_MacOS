@@ -31,11 +31,22 @@ function convertTo12HourFormat(dateTime) {
 // get all orders
 const getAllOrders = async (req, res) => {
   try {
-    const results = await query("SELECT * FROM orders ORDER BY status ASC");
+    const { limit = 10, offset = 0 } = req.query;
+    const results = await query(
+      `SELECT * FROM orders ORDER BY status ASC LIMIT ${limit} OFFSET ${offset}`
+    );
+    const orderresults = await query(
+      `SELECT * FROM orders ORDER BY status ASC`
+    );
+    const latestOrder = await query(
+      `SELECT * FROM orders ORDER BY id DESC LIMIT 1`
+    );
     res.status(200).json({
       success: true,
       message: "Get All Orders Successfully!",
       result: results,
+      orderresults,
+      latestOrder,
     });
   } catch (error) {
     res.status(500).send({

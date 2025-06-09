@@ -5,14 +5,19 @@ const axios = require("axios");
 
 const getAllVehicles = async (req, res) => {
   try {
-    const { limit = 10, offset = 0 } = req.query;
+    const { limit = 10, offset = 0, username } = req.query;
     const result = await query(
       `SELECT * FROM vehicle LIMIT ${limit} OFFSET ${offset}`
     );
-    const vehiclesresults = await query("SELECT * FROM vehicle");
+    const vehiclesresults = await query(
+      `SELECT * FROM vehicle WHERE client = ?`,
+      [username]
+    );
+    const totalVehicles = await query(`SELECT * FROM vehicle`);
     res.status(200).send({
       success: true,
       result,
+      totalVehicles: totalVehicles.length,
       vehiclesresults,
     });
   } catch (error) {

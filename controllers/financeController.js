@@ -6,14 +6,19 @@ const allVehiclesGeneratePdf = require("../GeneratedPDF/allVehiclesGeneratePdf")
 
 const getAllVehicles = async (req, res) => {
   try {
-    const { limit = 10, offset = 0 } = req.query;
+    const { limit = 10, offset = 0, username } = req.query;
     const result = await query(
       `SELECT DISTINCT v.*, d.device_type FROM vehicle v LEFT JOIN devices d ON v.IMEI = d.IMEI LIMIT ${limit} OFFSET ${offset}`
     );
-    const vehiclesresults = await query("SELECT * FROM vehicle");
+    const totalVehicles = await query("SELECT * FROM vehicle");
+    const vehiclesresults = await query(
+      `SELECT * FROM vehicle WHERE client = ?`,
+      [username]
+    );
     res.status(200).send({
       success: true,
       result,
+      totalVehicles,
       vehiclesresults,
     });
   } catch (error) {

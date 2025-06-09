@@ -10,7 +10,7 @@
   "author": "ClickLife",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.7.5",
+    "axios": "^1.7.7",
     "colors": "^1.4.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",

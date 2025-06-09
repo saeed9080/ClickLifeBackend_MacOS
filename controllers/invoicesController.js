@@ -3,22 +3,29 @@ const deletedVehiclesGeneratePdf = require("../GeneratedPDF/deletedVehiclesGener
 
 // get all deleted vehicles
 
-const getAllDeletedVehicles = async (req, res) => {
+const getAllInvoices = async (req, res) => {
   try {
     const { limit = 10, offset = 0, username } = req.query;
     const result = await query(
-      `SELECT * FROM deleted_vehicle LIMIT ${limit} OFFSET ${offset}`
+      `SELECT * FROM invoice_imp LIMIT ${limit} OFFSET ${offset}`
     );
-    const totalDeletedVehicles = await query("SELECT * FROM deleted_vehicle");
-    const deletedvehiclesresults = await query(
-      `SELECT * FROM deleted_vehicle WHERE Client_Name = ?`,
-      [username]
+    const totalinvoice = await query("SELECT * FROM invoice_imp");
+    const invoiceresults = await query(
+      `SELECT * FROM invoice_imp
+WHERE company = ?
+   OR company IN (
+     SELECT trade_name
+     FROM client
+     WHERE Namee = ?
+   );
+`,
+      [username, username]
     );
     res.status(200).send({
       success: true,
       result,
-      totalDeletedVehicles,
-      deletedvehiclesresults,
+      totalinvoice: totalinvoice.length,
+      invoiceresults,
     });
   } catch (error) {
     res.status(400).send({
@@ -32,15 +39,15 @@ const getAllDeletedVehicles = async (req, res) => {
 
 const searchController = async (req, res) => {
   try {
-    const { Vehicle_Number, Client_Name } = req.body;
+    const { name, company } = req.body;
 
-    let sql = `SELECT * FROM deleted_vehicle WHERE Vehicle_Number LIKE '%${Vehicle_Number}%' OR Client_Name LIKE '%${Client_Name}%'`;
+    let sql = `SELECT * FROM invoice_imp WHERE name LIKE '%${name}%' OR company LIKE '%${company}%'`;
 
     const results = await query(sql);
     res.status(200).json({
       success: true,
       message: "Search results",
-      total_vehicle_length: results.length,
+      total_invoices_length: results.length,
       result: results,
     });
   } catch (error) {
@@ -51,7 +58,7 @@ const searchController = async (req, res) => {
   }
 };
 
-const generateDeletedVehiclesPDFController = async (req, res) => {
+const generateInvoicePDFController = async (req, res) => {
   try {
     const { data, username } = req.body;
     const pdfBuffer = await deletedVehiclesGeneratePdf(data, username);
@@ -71,7 +78,7 @@ const generateDeletedVehiclesPDFController = async (req, res) => {
 };
 
 module.exports = {
-  getAllDeletedVehicles,
+  getAllInvoices,
   searchController,
-  generateDeletedVehiclesPDFController,
+  generateInvoicePDFController,
 };

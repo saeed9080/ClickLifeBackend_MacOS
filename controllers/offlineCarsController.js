@@ -4,7 +4,7 @@ const offlineCarsGeneratePdf = require("../GeneratedPDF/offlineCarsGeneratePdf")
 
 const getAllVehicles = async (req, res) => {
   try {
-    const { limit = 10, offset = 0 } = req.query;
+    const { limit = 10, offset = 0, username } = req.query;
     const result = await query(`
       SELECT * FROM vehicle 
       WHERE last_signal = 'Not connected'
@@ -14,7 +14,7 @@ const getAllVehicles = async (req, res) => {
       AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3
       LIMIT ${limit} OFFSET ${offset};
     `);
-    const totalcount = await query(`
+    const totalVehicles = await query(`
       SELECT * FROM vehicle 
       WHERE last_signal = 'Not connected'
       UNION
@@ -22,9 +22,15 @@ const getAllVehicles = async (req, res) => {
       WHERE last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'
       AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3
     `);
+    const totalcount = await query(
+      `
+SELECT * FROM vehicle WHERE client = ? AND ( last_signal = 'Not connected' OR ( STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p') IS NOT NULL AND STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p') < NOW() - INTERVAL 3 DAY ) ) `,
+      [username]
+    );
     res.status(200).send({
       success: true,
       result,
+      totalVehicles,
       totalcount,
     });
   } catch (error) {
@@ -51,7 +57,6 @@ const searchController = async (req, res) => {
     (Sim_Number LIKE '%${Sim_Number}%' AND last_signal = 'Not connected') OR (Sim_Number LIKE '%${Sim_Number}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)`;
 
     const results = await query(sql);
-    console.log(results.length);
     res.status(200).json({
       success: true,
       message: "Search results",

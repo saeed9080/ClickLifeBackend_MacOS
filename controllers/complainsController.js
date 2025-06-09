@@ -4,10 +4,21 @@ const admin = require("../config/firebaseService");
 
 const getAllComplains = async (req, res) => {
   try {
-    const result = await query("SELECT * FROM complains ORDER BY status ASC");
+    const { limit = 10, offset = 0 } = req.query;
+    const result = await query(
+      `SELECT * FROM complains ORDER BY status ASC LIMIT ${limit} OFFSET ${offset}`
+    );
+    const comlainresults = await query(
+      `SELECT * FROM complains ORDER BY status ASC`
+    );
+    const latestComplain = await query(
+      `SELECT * FROM complains ORDER BY id DESC LIMIT 1`
+    );
     res.status(200).send({
       success: true,
       result,
+      comlainresults,
+      latestComplain,
     });
   } catch (error) {
     res.status(400).send({
@@ -91,42 +102,63 @@ const createComplain = async (req, res) => {
       issue_date: issue_date, // Automatically generated issue_date
     };
 
-    // Inserting the order into the orders table
-    const result = await query("INSERT INTO complains SET ?", complainData);
     // Fetch device tokens for users
-    const userTokensResult = await query(
-      `
-            (SELECT device_token FROM Users WHERE device_token IS NOT NULL AND department = ? AND country = ?) 
-            UNION 
-            (SELECT device_token FROM client WHERE device_token IS NOT NULL AND Namee = ?)`,
-      [dep_name, country, client]
-    );
-    if (userTokensResult.length === 0) {
+    // const userTokensResult = await query(
+    //   `
+    //   (SELECT device_token FROM Users WHERE device_token IS NOT NULL AND department = ? AND country = ?)
+    //   UNION
+    //   (SELECT device_token FROM client WHERE device_token IS NOT NULL AND Namee = ?)`,
+    //   [dep_name, country, client]
+    // );
+
+    let userTokensResult;
+    if (country) {
+      userTokensResult = await query(
+        `
+    (SELECT device_token FROM Users WHERE device_token IS NOT NULL AND department = ? AND country = ?) 
+    UNION 
+    (SELECT device_token FROM client WHERE device_token IS NOT NULL AND Namee = ?)`,
+        [dep_name, country, client]
+      );
+    } else {
+      userTokensResult = await query(
+        `
+    (SELECT device_token FROM Users WHERE device_token IS NOT NULL AND department = ?) 
+    UNION 
+    (SELECT device_token FROM client WHERE device_token IS NOT NULL AND Namee = ?)`,
+        [dep_name, client]
+      );
+    }
+
+    if (userTokensResult.length !== 0) {
+      // Inserting the order into the complains table
+      const result = await query("INSERT INTO complains SET ?", complainData);
+      // Extract device tokens from the result
+      // const deviceTokens = userTokensResult.map(user => user.device_token);
+      const deviceTokens = userTokensResult
+        .map((user) => user.device_token)
+        .filter((token) => token);
+
+      // Send push notification
+      const message = {
+        notification: {
+          title: "Complain Created",
+          body: `${username} Created Complain for ${complainData.client}.`,
+        },
+        tokens: deviceTokens,
+      };
+      await admin.messaging().sendEachForMulticast(message);
+      res.status(200).send({
+        success: true,
+        message: "Create Complain Successfully!",
+        result,
+      });
+    } else {
       return res.status(404).send({
         success: false,
-        message: "No users found in the specified id",
+        message: "Sorry, client login first. Then try again.",
       });
     }
-    // Extract device tokens from the result
-    // const deviceTokens = userTokensResult.map(user => user.device_token);
-    const deviceTokens = userTokensResult
-      .map((user) => user.device_token)
-      .filter((token) => token);
-
-    // Send push notification
-    const message = {
-      notification: {
-        title: "Complain Created",
-        body: `${username} Created Complain for ${complainData.client}.`,
-      },
-      tokens: deviceTokens,
-    };
-    await admin.messaging().sendEachForMulticast(message);
-    res.status(200).send({
-      success: true,
-      message: "Create Complain Successfully!",
-      result,
-    });
   } catch (error) {
     res.status(500).send({
       success: false,
@@ -156,46 +188,64 @@ const issuesolved = async (req, res) => {
 
     const solve_date = getFormattedLocalDateTime(); // This will print the current date and time in yyyy-mm-dd hh:mm:ss format
     const { status, client, country, username, department } = req.body;
-    // Update the complains with the assigned user
-    const result = await query(
-      "UPDATE complains SET status = ?, solve_date = ? WHERE id = ?",
-      [status, solve_date, complainId]
-    );
-    console.log("Department:", department);
-    const userTokensResult = await query(
-      `
-            (SELECT device_token FROM Users WHERE device_token IS NOT NULL AND Department = ? AND country = ?) 
-            UNION 
-            (SELECT device_token FROM client WHERE device_token IS NOT NULL AND Namee = ?)`,
-      [department, country, client]
-    );
-    if (userTokensResult.length === 0) {
+
+    // const userTokensResult = await query(
+    //   `
+    //   (SELECT device_token FROM Users WHERE device_token IS NOT NULL AND Department = ? AND country = ?)
+    //   UNION
+    //   (SELECT device_token FROM client WHERE device_token IS NOT NULL AND Namee = ?)`,
+    //   [department, country, client]
+    // );
+    let userTokensResult;
+    if (country) {
+      userTokensResult = await query(
+        `
+    (SELECT device_token FROM Users WHERE device_token IS NOT NULL AND Department = ? AND country = ?) 
+    UNION 
+    (SELECT device_token FROM client WHERE device_token IS NOT NULL AND Namee = ?)`,
+        [department, country, client]
+      );
+    } else {
+      userTokensResult = await query(
+        `
+    (SELECT device_token FROM Users WHERE device_token IS NOT NULL AND Department = ?) 
+    UNION 
+    (SELECT device_token FROM client WHERE device_token IS NOT NULL AND Namee = ?)`,
+        [department, client]
+      );
+    }
+    if (userTokensResult.length !== 0) {
+      // Update the complains with the assigned user
+      const result = await query(
+        "UPDATE complains SET status = ?, solve_date = ? WHERE id = ?",
+        [status, solve_date, complainId]
+      );
+      // Extract device tokens from the result
+      // const deviceTokens = userTokensResult.map(user => user.device_token);
+      const deviceTokens = userTokensResult
+        .map((user) => user.device_token)
+        .filter((token) => token);
+
+      // Send push notification
+      const message = {
+        notification: {
+          title: "Issue Solved",
+          body: `${username} Solved Issue for ${client}.`,
+        },
+        tokens: deviceTokens,
+      };
+      await admin.messaging().sendEachForMulticast(message);
+      res.status(200).send({
+        success: true,
+        message: "Issue Solved Successfully!",
+        result,
+      });
+    } else {
       return res.status(404).send({
         success: false,
-        message: "No users found in the specified id",
+        message: "Sorry, client login first. Then try again.",
       });
     }
-    // Extract device tokens from the result
-    // const deviceTokens = userTokensResult.map(user => user.device_token);
-    const deviceTokens = userTokensResult
-      .map((user) => user.device_token)
-      .filter((token) => token);
-    console.log("Device tokens:", deviceTokens);
-
-    // Send push notification
-    const message = {
-      notification: {
-        title: "Issue Solved",
-        body: `${username} Solved Issue for ${client}.`,
-      },
-      tokens: deviceTokens,
-    };
-    await admin.messaging().sendEachForMulticast(message);
-    res.status(200).send({
-      success: true,
-      message: "Issue Solved Successfully!",
-      result,
-    });
   } catch (error) {
     res.status(500).send({
       success: false,

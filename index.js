@@ -38,6 +38,9 @@ app.use("/api/v1/check_payment", require("./routes/checkpayment"));
 app.use("/api/v1/notifications", require("./routes/notifications"));
 app.use("/api/v1/smscommands", require("./routes/smscommands"));
 app.use("/api/v1/killengine", require("./routes/killengine"));
+app.use("/api/v1/invoices", require("./routes/invoices"));
+app.use("/api/v1/statements", require("./routes/statements"));
+app.use("/api/v1/receipts", require("./routes/receipts"));
 
 app.get("/", (req, res) => {
   return res.status(200).send("<h2>Welcome To Node Server</h2>");
