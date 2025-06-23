@@ -1,5 +1,4 @@
 const query = require("../config/db");
-const deletedVehiclesGeneratePdf = require("../GeneratedPDF/deletedVehiclesGeneratePdf");
 
 // get all deleted vehicles
 
@@ -7,7 +6,7 @@ const getAllInvoices = async (req, res) => {
   try {
     const { limit = 10, offset = 0, username } = req.query;
     const result = await query(
-      `SELECT * FROM invoice_imp LIMIT ${limit} OFFSET ${offset}`
+      `SELECT * FROM invoice_imp ORDER BY imp_date DESC LIMIT ${limit} OFFSET ${offset}`
     );
     const totalinvoice = await query("SELECT * FROM invoice_imp");
     const invoiceresults = await query(
@@ -17,7 +16,7 @@ WHERE company = ?
      SELECT trade_name
      FROM client
      WHERE Namee = ?
-   );
+   ) ORDER BY imp_date DESC;
 `,
       [username, username]
     );
@@ -58,27 +57,7 @@ const searchController = async (req, res) => {
   }
 };
 
-const generateInvoicePDFController = async (req, res) => {
-  try {
-    const { data, username } = req.body;
-    const pdfBuffer = await deletedVehiclesGeneratePdf(data, username);
-    const pdfBase64 = pdfBuffer.toString("base64"); // Convert buffer to base64
-
-    res.status(200).json({
-      success: true,
-      message: "PDF generated successfully!",
-      pdfBase64, // Send the base64 string
-    });
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
 module.exports = {
   getAllInvoices,
   searchController,
-  generateInvoicePDFController,
 };

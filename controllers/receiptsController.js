@@ -4,7 +4,7 @@ const getAllReceipts = async (req, res) => {
   try {
     const { limit = 10, offset = 0, username } = req.query;
     const result = await query(
-      `SELECT * FROM receipt LIMIT ${limit} OFFSET ${offset}`
+      `SELECT * FROM receipt ORDER BY date DESC LIMIT ${limit} OFFSET ${offset}`
     );
     const totalreceipt = await query("SELECT * FROM receipt");
     const receiptresults = await query(
@@ -14,7 +14,7 @@ WHERE company = ?
      SELECT trade_name
      FROM client
      WHERE Namee = ?
-   );
+   ) ORDER BY date DESC;
 `,
       [username, username]
     );

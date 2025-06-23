@@ -33,10 +33,10 @@ const getAllOrders = async (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query;
     const results = await query(
-      `SELECT * FROM orders ORDER BY status ASC LIMIT ${limit} OFFSET ${offset}`
+      `SELECT * FROM orders WHERE status = 0 ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`
     );
     const orderresults = await query(
-      `SELECT * FROM orders ORDER BY status ASC`
+      `SELECT * FROM orders WHERE status = 0 ORDER BY id DESC`
     );
     const latestOrder = await query(
       `SELECT * FROM orders ORDER BY id DESC LIMIT 1`
