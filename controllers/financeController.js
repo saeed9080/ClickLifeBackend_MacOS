@@ -8,12 +8,12 @@ const getAllVehicles = async (req, res) => {
   try {
     const { limit = 10, offset = 0, username } = req.query;
     const result = await query(
-      `SELECT DISTINCT v.*, d.device_type FROM vehicle v LEFT JOIN devices d ON v.IMEI = d.IMEI LIMIT ${limit} OFFSET ${offset}`
+      `SELECT DISTINCT v.*, d.device_type FROM vehicle v LEFT JOIN devices d ON v.IMEI = d.IMEI LIMIT ${limit} OFFSET ${offset}`,
     );
     const totalVehicles = await query("SELECT * FROM vehicle");
     const vehiclesresults = await query(
-      `SELECT * FROM vehicle WHERE client = ?`,
-      [username]
+      `SELECT * FROM vehicle WHERE Client = ?`,
+      [username],
     );
     res.status(200).send({
       success: true,
@@ -48,16 +48,55 @@ const getClientData = async (req, res) => {
 
 // searchController
 
+// const searchController = async (req, res) => {
+//   try {
+//     const { Vehicle_Label, Client } = req.body;
+
+//     let sql = `SELECT * FROM vehicle WHERE Vehicle_Label LIKE '%${Vehicle_Label}%' OR Client LIKE '%${Client}%'`;
+//     const results = await query(sql);
+//     res.status(200).json({
+//       success: true,
+//       message: "Search results",
+//       result: results,
+//     });
+//   } catch (error) {
+//     res.status(500).send({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
 const searchController = async (req, res) => {
   try {
-    const { Vehicle_Label, Client, IMEI, Sim_Number } = req.body;
+    const { Vehicle_Label = "", loginType, username } = req.body;
+    console.log(Vehicle_Label, username, loginType);
+    let sql;
+    let params;
 
-    let sql = `SELECT * FROM vehicle WHERE Vehicle_Label LIKE '%${Vehicle_Label}%' OR Client LIKE '%${Client}%' OR IMEI LIKE '%${IMEI}%' OR Sim_Number LIKE '%${Sim_Number}%'`;
-    const results = await query(sql);
+    if (loginType === "client") {
+      sql = `
+        SELECT * FROM vehicle
+        WHERE Client = ?
+        AND Vehicle_Label LIKE ?
+      `;
+      params = [username, `%${Vehicle_Label}%`];
+    } else {
+      sql = `
+        SELECT * FROM vehicle
+        WHERE Vehicle_Label LIKE ?
+        OR Client LIKE ?
+      `;
+      params = [`%${Vehicle_Label}%`, `%${Vehicle_Label}%`];
+    }
+    console.log("Final SQL:", sql);
+    console.log("Params:", params);
+    const results = await query(sql, params);
+    console.log("Results:", results.length);
+
     res.status(200).json({
       success: true,
       message: "Search results",
-      total_vehicle_length: results.length,
       result: results,
     });
   } catch (error) {
@@ -90,6 +129,7 @@ const generateVehiclesPDFController = async (req, res) => {
 const generateAllVehiclesPDFController = async (req, res) => {
   try {
     const { data, username } = req.body;
+    console.log("Pdf data: ", data.length);
     const pdfBuffer = await allVehiclesGeneratePdf(data, username);
     const pdfBase64 = pdfBuffer.toString("base64"); // Convert buffer to base64
 
@@ -113,7 +153,7 @@ const unPaidVehiclesController = async (req, res) => {
     const { username } = req.body;
     const result = await query(
       `SELECT COUNT(*) FROM vehicle WHERE Expiry_Datee < CURDATE() AND Client = ?`,
-      [username]
+      [username],
     );
     res.status(200).send({
       success: true,
@@ -135,7 +175,7 @@ const paidVehiclesController = async (req, res) => {
     const { username } = req.body;
     const result = await query(
       `SELECT COUNT(*) FROM vehicle WHERE Expiry_Datee > CURDATE() AND Client = ?`,
-      [username]
+      [username],
     );
     res.status(200).send({
       success: true,

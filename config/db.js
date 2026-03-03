@@ -22,6 +22,7 @@ const query = (sql, values) => {
     // Get a connection from the pool
     pool.getConnection((err, connection) => {
       if (err) {
+        console.error("Database connection error:".bgRed.white, err.message);
         reject(err);
       } else {
         // Execute the query with the provided values

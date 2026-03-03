@@ -6,11 +6,11 @@ const getAllInvoices = async (req, res) => {
   try {
     const { limit = 10, offset = 0, username } = req.query;
     const result = await query(
-      `SELECT * FROM invoice_imp ORDER BY imp_date DESC LIMIT ${limit} OFFSET ${offset}`
+      `SELECT * FROM invoice ORDER BY imp_date DESC LIMIT ${limit} OFFSET ${offset}`,
     );
-    const totalinvoice = await query("SELECT * FROM invoice_imp");
+    const totalinvoice = await query("SELECT * FROM invoice");
     const invoiceresults = await query(
-      `SELECT * FROM invoice_imp
+      `SELECT * FROM invoice
 WHERE company = ?
    OR company IN (
      SELECT trade_name
@@ -18,7 +18,7 @@ WHERE company = ?
      WHERE Namee = ?
    ) ORDER BY imp_date DESC;
 `,
-      [username, username]
+      [username, username],
     );
     res.status(200).send({
       success: true,
@@ -40,7 +40,7 @@ const searchController = async (req, res) => {
   try {
     const { name, company } = req.body;
 
-    let sql = `SELECT * FROM invoice_imp WHERE name LIKE '%${name}%' OR company LIKE '%${company}%'`;
+    let sql = `SELECT * FROM invoice WHERE inv_num LIKE '%${name}%' OR company LIKE '%${company}%'`;
 
     const results = await query(sql);
     res.status(200).json({

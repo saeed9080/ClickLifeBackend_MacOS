@@ -41,6 +41,7 @@ app.use("/api/v1/killengine", require("./routes/killengine"));
 app.use("/api/v1/invoices", require("./routes/invoices"));
 app.use("/api/v1/statements", require("./routes/statements"));
 app.use("/api/v1/receipts", require("./routes/receipts"));
+app.use("/api/v1/getcstout", require("./routes/get-cst-out"));
 
 app.get("/", (req, res) => {
   return res.status(200).send("<h2>Welcome To Node Server</h2>");

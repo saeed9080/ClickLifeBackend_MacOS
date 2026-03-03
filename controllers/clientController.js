@@ -1,4 +1,5 @@
 const query = require("../config/db");
+const argon2 = require("argon2"); // use argon2 for PHP Argon2ID hashes
 
 // get all client
 
@@ -65,12 +66,27 @@ const getClientData = async (req, res) => {
 
 const createClient = async (req, res) => {
   try {
+    const pepper = "mySuperSecretPepperKeyTAQI!";
     // Check if manager is an empty array and set it to null if so
     const managerData =
       Array.isArray(req.body.manager) && req.body.manager.length === 0
         ? null
         : JSON.stringify(req.body.manager);
     // Constructing the client object with the fetched data
+
+    const { password } = req.body;
+    let hashedPassword = password;
+
+    // Only hash password if it is provided
+    if (password) {
+      // Hash using Argon2ID + pepper
+      hashedPassword = await argon2.hash(password + pepper, {
+        type: argon2.argon2id,
+        memoryCost: 2 ** 17, // 131072 KB
+        timeCost: 4,
+        parallelism: 2,
+      });
+    }
     const clientData = {
       trade_name: req.body.trade_name || null,
       Namee: req.body.Namee || null,
@@ -89,7 +105,7 @@ const createClient = async (req, res) => {
       Status: req.body.Status || null,
       Phone: req.body.Phone || null,
       Created_By: req.body.Created_By || null,
-      password: req.body.password || null,
+      password: hashedPassword || null,
       ["4G_price"]: req.body["4G_price"] || null,
       ["2G_price"]: req.body["2G_price"] || null,
       auto_sms: req.body.auto_sms || null,
@@ -119,7 +135,72 @@ const createClient = async (req, res) => {
 const updateClient = async (req, res) => {
   try {
     const clientId = req.params.clientId;
-    const updatedClientData = req.body; // Get updated client data from request body
+    const pepper = "mySuperSecretPepperKeyTAQI!";
+    // ✅ Destructure fields from body
+    const {
+      trade_name,
+      Namee,
+      Email,
+      auth_person,
+      auth_phone,
+      auth_id,
+      device_price,
+      license_no,
+      city,
+      address,
+      type,
+      website,
+      manager,
+      vatNo,
+      Status,
+      Phone,
+      password,
+      ["4G_price"]: FourG_price,
+      ["2G_price"]: TwoG_price,
+      auto_sms,
+      sms_language,
+      sms_type,
+      country,
+    } = req.body;
+    let hashedPassword = password;
+
+    // Only hash password if it is provided
+    if (password) {
+      // Hash using Argon2ID + pepper
+      hashedPassword = await argon2.hash(password + pepper, {
+        type: argon2.argon2id,
+        memoryCost: 2 ** 17, // 131072 KB
+        timeCost: 4,
+        parallelism: 2,
+      });
+    }
+    // ✅ Create clean update object
+    const updatedClientData = {
+      trade_name,
+      Namee,
+      Email,
+      auth_person,
+      auth_phone,
+      auth_id,
+      device_price,
+      license_no,
+      city,
+      address,
+      type,
+      website,
+      manager,
+      vatNo,
+      Status,
+      Phone,
+      password: hashedPassword,
+      "4G_price": FourG_price,
+      "2G_price": TwoG_price,
+      auto_sms,
+      sms_language,
+      sms_type,
+      country,
+    };
+    console.log("Client Data: ", updatedClientData);
     const result = await query("UPDATE client SET ? WHERE id = ?", [
       updatedClientData,
       clientId,

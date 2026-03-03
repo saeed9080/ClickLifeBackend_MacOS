@@ -25,7 +25,7 @@ const getAllVehicles = async (req, res) => {
     const totalcount = await query(
       `
 SELECT * FROM vehicle WHERE client = ? AND ( last_signal = 'Not connected' OR ( STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p') IS NOT NULL AND STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p') < NOW() - INTERVAL 3 DAY ) ) `,
-      [username]
+      [username],
     );
     res.status(200).send({
       success: true,
@@ -43,20 +43,92 @@ SELECT * FROM vehicle WHERE client = ? AND ( last_signal = 'Not connected' OR ( 
 
 // searchController
 
+// const searchController = async (req, res) => {
+//   try {
+//     const { Vehicle_Label, Client, IMEI, Sim_Number } = req.body;
+
+//     let sql = `SELECT * FROM vehicle WHERE
+//     (Vehicle_Label LIKE '%${Vehicle_Label}%' AND last_signal = 'Not connected') OR (Vehicle_Label LIKE '%${Vehicle_Label}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+//     OR
+//     (Client LIKE '%${Client}%' AND last_signal = 'Not connected') OR (Client LIKE '%${Client}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+//     OR
+//     (IMEI LIKE '%${IMEI}%' AND last_signal = 'Not connected') OR (IMEI LIKE '%${IMEI}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+//     OR
+//     (Sim_Number LIKE '%${Sim_Number}%' AND last_signal = 'Not connected') OR (Sim_Number LIKE '%${Sim_Number}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)`;
+
+//     const results = await query(sql);
+//     res.status(200).json({
+//       success: true,
+//       message: "Search results",
+//       total_vehicle_length: results.length,
+//       result: results,
+//     });
+//   } catch (error) {
+//     res.status(500).send({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
 const searchController = async (req, res) => {
   try {
-    const { Vehicle_Label, Client, IMEI, Sim_Number } = req.body;
+    const { Vehicle_Label = "", loginType, username } = req.body;
+    console.log(Vehicle_Label, username, loginType);
+    let sql = "";
+    let params = [];
 
-    let sql = `SELECT * FROM vehicle WHERE 
-    (Vehicle_Label LIKE '%${Vehicle_Label}%' AND last_signal = 'Not connected') OR (Vehicle_Label LIKE '%${Vehicle_Label}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
-    OR 
-    (Client LIKE '%${Client}%' AND last_signal = 'Not connected') OR (Client LIKE '%${Client}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
-    OR
-    (IMEI LIKE '%${IMEI}%' AND last_signal = 'Not connected') OR (IMEI LIKE '%${IMEI}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
-    OR 
-    (Sim_Number LIKE '%${Sim_Number}%' AND last_signal = 'Not connected') OR (Sim_Number LIKE '%${Sim_Number}%' AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$'AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)`;
+    // Client login - sirf apna data
+    if (loginType === "client") {
+      sql = `
+        SELECT * FROM vehicle 
+        WHERE Client = ?
+        AND (
+          (Vehicle_Label LIKE ? AND last_signal = 'Not connected') 
+          OR 
+          (Vehicle_Label LIKE ? AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$' 
+           AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+        )
+      `;
+      params = [username, `%${Vehicle_Label}%`, `%${Vehicle_Label}%`];
+    } else {
+      // Admin / Staff login - full search on multiple columns
+      sql = `
+        SELECT * FROM vehicle
+        WHERE 
+          (Vehicle_Label LIKE ? AND last_signal = 'Not connected') 
+          OR (Vehicle_Label LIKE ? AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$' 
+              AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+          OR
+          (Client LIKE ? AND last_signal = 'Not connected') 
+          OR (Client LIKE ? AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$' 
+              AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+          OR
+          (IMEI LIKE ? AND last_signal = 'Not connected') 
+          OR (IMEI LIKE ? AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$' 
+              AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+          OR
+          (Sim_Number LIKE ? AND last_signal = 'Not connected') 
+          OR (Sim_Number LIKE ? AND last_signal REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} (AM|PM)$' 
+              AND DATEDIFF(CURDATE(), STR_TO_DATE(last_signal, '%d-%m-%Y %h:%i:%s %p')) > 3)
+      `;
+      params = [
+        `%${Vehicle_Label}%`,
+        `%${Vehicle_Label}%`,
+        `%${Vehicle_Label}%`,
+        `%${Vehicle_Label}%`,
+        `%${Vehicle_Label}%`,
+        `%${Vehicle_Label}%`,
+        `%${Vehicle_Label}%`,
+        `%${Vehicle_Label}%`,
+      ];
+    }
 
-    const results = await query(sql);
+    console.log("Final SQL:", sql);
+    console.log("Params:", params);
+
+    const results = await query(sql, params);
+
     res.status(200).json({
       success: true,
       message: "Search results",
@@ -64,6 +136,7 @@ const searchController = async (req, res) => {
       result: results,
     });
   } catch (error) {
+    console.error("Search Error:", error);
     res.status(500).send({
       success: false,
       message: error.message,
