@@ -15,6 +15,7 @@ const getAllVehicles = async (req, res) => {
       `SELECT * FROM vehicle WHERE Client = ?`,
       [username],
     );
+    console.log("vehiclesresults: ", vehiclesresults.length);
     res.status(200).send({
       success: true,
       result,
@@ -110,6 +111,7 @@ const searchController = async (req, res) => {
 const generateVehiclesPDFController = async (req, res) => {
   try {
     const { data, username } = req.body;
+    console.log("PDF Data Length:", data.length);
     const pdfBuffer = await vehiclesGeneratePdf(data, username);
     const pdfBase64 = pdfBuffer.toString("base64"); // Convert buffer to base64
 
@@ -126,25 +128,62 @@ const generateVehiclesPDFController = async (req, res) => {
   }
 };
 
+const path = require("path");
+const fs = require("fs");
+const generatePDF = require("../GeneratedPDF/allVehiclesGeneratePdf");
+
 const generateAllVehiclesPDFController = async (req, res) => {
   try {
-    const { data, username } = req.body;
-    console.log("Pdf data: ", data.length);
-    const pdfBuffer = await allVehiclesGeneratePdf(data, username);
-    const pdfBase64 = pdfBuffer.toString("base64"); // Convert buffer to base64
+    const { username } = req.body;
+
+    const vehicles = await query(`
+      SELECT DISTINCT v.*, d.device_type
+      FROM vehicle v
+      LEFT JOIN devices d ON v.IMEI = d.IMEI
+    `);
+
+    console.log("Vehicles count:", vehicles.length);
+
+    const pdfBuffer = await generatePDF(vehicles, username);
+
+    const fileName = `vehicles_${Date.now()}.pdf`;
+    const filePath = path.join(__dirname, "../public/pdfs", fileName);
+
+    fs.writeFileSync(filePath, pdfBuffer);
+
+    const url = `${req.protocol}://${req.get("host")}/pdfs/${fileName}`;
 
     res.status(200).json({
       success: true,
-      message: "PDF generated successfully!",
-      pdfBase64, // Send the base64 string
+      url,
     });
   } catch (error) {
-    res.status(500).send({
+    res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
+
+// const generateAllVehiclesPDFController = async (req, res) => {
+//   try {
+//     const { data, username } = req.body;
+//     console.log("Pdf data: ", data.length);
+//     const pdfBuffer = await allVehiclesGeneratePdf(data, username);
+//     const pdfBase64 = pdfBuffer.toString("base64"); // Convert buffer to base64
+
+//     res.status(200).json({
+//       success: true,
+//       message: "PDF generated successfully!",
+//       pdfBase64, // Send the base64 string
+//     });
+//   } catch (error) {
+//     res.status(500).send({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
 
 // unPaidVehicles
 

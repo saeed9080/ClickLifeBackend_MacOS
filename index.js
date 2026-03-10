@@ -22,6 +22,7 @@ app.use(cors()); // cors middleware to prevent errors when trying to access data
 app.use(cookieParser());
 // Serve static files from the uploads directory
 app.use("/uploads", express.static(path.join(__dirname, "./uploads")));
+app.use("/pdfs", express.static("public/pdfs"));
 
 //routes
 app.use("/api/v1/user", require("./routes/users"));
