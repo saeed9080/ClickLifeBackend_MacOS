@@ -623,7 +623,7 @@ const updateUserController = async (req, res) => {
       country,
       loginType,
     } = req.body;
-
+    console.log("Password ", password);
     const pepper = "mySuperSecretPepperKeyTAQI!"; // same as login
 
     let sql;
@@ -639,16 +639,30 @@ const updateUserController = async (req, res) => {
 
     let hashedPassword = password;
 
-    // Only hash password if it is provided
     if (password) {
-      // Hash using Argon2ID + pepper
-      hashedPassword = await argon2.hash(password + pepper, {
-        type: argon2.argon2id,
-        memoryCost: 2 ** 17, // 131072 KB
-        timeCost: 4,
-        parallelism: 2,
-      });
+      // check if already hashed
+      if (password.startsWith("$argon2")) {
+        hashedPassword = password; // already hashed
+      } else {
+        // hash plain password
+        hashedPassword = await argon2.hash(password + pepper, {
+          type: argon2.argon2id,
+          memoryCost: 2 ** 17,
+          timeCost: 4,
+          parallelism: 2,
+        });
+      }
     }
+    // Only hash password if it is provided
+    // if (password) {
+    //   // Hash using Argon2ID + pepper
+    //   hashedPassword = await argon2.hash(password + pepper, {
+    //     type: argon2.argon2id,
+    //     memoryCost: 2 ** 17, // 131072 KB
+    //     timeCost: 4,
+    //     parallelism: 2,
+    //   });
+    // }
 
     if (loginType === "client") {
       sql =
